@@ -28,7 +28,7 @@ public class FlinkETLApp {
                 try {
 
                     AccessV2 bean = JSON.parseObject(value.f1, AccessV2.class);
-                    been.id = value.f0;
+                    bean.id = value.f0;
 
                     long time = bean.time;
                     String[] splits = format.format(time).split("-");
