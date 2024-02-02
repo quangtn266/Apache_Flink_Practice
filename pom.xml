@@ -36,6 +36,8 @@
         <module>imooc-flink-basic</module>
         <module>imooc-flink-datastream</module>
         <module>imooc-flink-dataset</module>
+        <module>imooc-flink-sql</module>
+        <module>imooc-flink-project</module>
     </modules>
 
 
