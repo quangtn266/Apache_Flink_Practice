@@ -6,7 +6,6 @@ public class AccessV2 {
     public String device;
     public String deviceType;
     public String os;
-    public String os;
     public String event;
     public String net;
     public String channel;

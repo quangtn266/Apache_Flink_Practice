@@ -6,6 +6,7 @@ import com.imooc.flink.domain.AccessV2;
 import com.imooc.flink.kafka.FlinkUtils;
 import com.imooc.flink.kafka.PKKafkaDeserializationSchema;
 import com.imooc.flink.udf.GaodeLocationMapFunction;
+//import com.imooc.flink.udf.GaodeLocationMapFunctionV2;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -17,41 +18,44 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 
 public class FlinkETLApp {
 
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args)throws Exception {
         DataStream<Tuple2<String, String>> source = FlinkUtils.createKafkaStreamV3(args, PKKafkaDeserializationSchema.class);
 
         FastDateFormat format = FastDateFormat.getInstance("yyyyMMdd-HH");
 
-        source.map(new MapFunction<Tuple2<String, String>, AccessV2>() {
-            @Override
-            public AccessV2 map(Tuple2<String, String> value) throws Exception {
-                try {
+        source.map(new MapFunction<Tuple2<String,String>, AccessV2>() {
+                    @Override
+                    public AccessV2 map(Tuple2<String, String> value) throws Exception {
+                        // 注意事项：一定要考虑解析的容错性
+                        try {
 
-                    AccessV2 bean = JSON.parseObject(value.f1, AccessV2.class);
-                    bean.id = value.f0;
+                            AccessV2 bean = JSON.parseObject(value.f1, AccessV2.class);
+                            bean.id = value.f0;
 
-                    long time = bean.time;
-                    String[] splits = format.format(time).split("-");
-                    String day = splits[0];
-                    String hour = splits[1];
-                    bean.day = day;
-                    bean.hour = hour;
+                            long time = bean.time;
+                            String[] splits = format.format(time).split("-");
+                            String day = splits[0];
+                            String hour = splits[1];
+                            bean.day = day;
+                            bean.hour = hour;
 
-                    return bean;
-                } catch(Exception e) {
-                    e.printStackTrace();
-                    return null;
-                }
-            }
-        }).filter(x -> x != null)
+                            return bean;
+                        } catch (Exception e) {
+                            e.printStackTrace(); // 写到某个地方
+                            return null;
+                        }
+                    }
+                }).filter(x -> x != null)
                 .filter(new FilterFunction<AccessV2>() {
                     @Override
                     public boolean filter(AccessV2 value) throws Exception {
                         return "startup".equals(value.event);
                     }
-                }).addSink(JdbcSink.sink(
-                        "insert into ch_event values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                        (pstmt, x) -> {
+                })
+                //.map(new GaodeLocationMapFunctionV2())
+                .addSink(JdbcSink.sink(
+                        "insert into ch_event  values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (pstmt, x)->{
                             pstmt.setString(1, x.id);
                             pstmt.setString(2, x.device);
                             pstmt.setString(3, x.deviceType);
@@ -70,10 +74,11 @@ public class FlinkETLApp {
                             pstmt.setString(16, x.hour);
                             pstmt.setLong(17, System.currentTimeMillis());
                         },
-                JdbcExecutionOptions.builder().withBatchSize(50).withBatchIntervalMs(4000).build(),
-                new JdbcConnectionOptions().JdbcConnectionOptionsBuilder()
-                        .withUrl("jdbc:clickhous://hadoop000:8123/pk")
-                        .withDriverName("ru.yandex.clickhouse.ClickHouseDriver")
+                        JdbcExecutionOptions.builder().withBatchSize(50).withBatchIntervalMs(4000).build(),
+                        new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+                                .withUrl("jdbc:clickhouse://hadoop000:8123/pk")
+                                .withDriverName("ru.yandex.clickhouse.ClickHouseDriver")
+                                .build()
                 ));;
         FlinkUtils.env.execute();
     }

@@ -41,7 +41,7 @@ public class PKMySQLSink extends RichSinkFunction<Tuple2<String, Double>> {
         System.out.println("=======invoke=========" + value.f0 + "--->" + value.f1);
 
         updatePstmt.setDouble(1, value.f1);
-        updatePstmt.setDouble(2, value.f0);
+        updatePstmt.setString(2, value.f0);
         updatePstmt.execute();
 
         if (updatePstmt.getUpdateCount() == 0) {

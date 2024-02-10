@@ -21,7 +21,7 @@ public class ClickHouseApp {
                     @Override
                     public Tuple3<String, String, String> map(String value) throws Exception {
                         String[] splits = value.split(",");
-                        return new Tuple3.of(splits[0].trim, splits[1].trim(), splits[2].trim());
+                        return  Tuple3.of(splits[0].trim(), splits[1].trim(), splits[2].trim());
                     }
                 }).addSink(JdbcSink.sink(
                         "insert into ch_test values(?,?,?)",
@@ -32,7 +32,7 @@ public class ClickHouseApp {
                         },
 
                 JdbcExecutionOptions.builder().withBatchSize(3).withBatchIntervalMs(4000).build(),
-                new JdbcConnectionOptions().JdbcConnectionOptionsBuilder()
+                new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
                         .withUrl("jdbc:clickhouse://ruozedata001:8123/pk")
                         .withDriverName("ru.yandex.clickhouse.ClickHouseDriver")
                         .build()
